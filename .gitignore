@@ -1,0 +1,15 @@
+# Everything under tools/ that is downloaded or generated:
+#   models/          the upstream Caffe weights, fetched by download_models.sh
+#   caffe_pb2.py     generated from caffe.proto by protoc
+#   ref_outputs.npz  reference tensors from the OpenCV Caffe importer
+#   *_out/           conversion output, copied into models/ once verified
+tools/models/
+tools/caffe_pb2.py
+tools/ref_outputs.npz
+tools/onnx_out/
+tools/tflite_out/
+
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
