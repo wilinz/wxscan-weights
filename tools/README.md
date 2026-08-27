@@ -14,36 +14,19 @@ question answerable.
 |---|---|
 | `download_models.sh` | Fetches the four Caffe files at the commit `opencv_contrib` pins, and checks the MD5 |
 | `ref_dump.py` | Reference output from OpenCV 4.x's Caffe importer, saved as `ref_outputs.npz` |
-| `caffe2tf.py` / `export_tflite.py` | The TFLite path: rebuild as Keras, export, compare |
-| `caffe2onnx.py` / `export_onnx.py` | The ONNX path: build the graph directly, export, compare |
+| `caffe2tf.py` | The TFLite converter, layer by layer, as a Keras model — a library, not a script |
+| `export_tflite.py` | Runs that converter, writes `tflite_out/`, prints the difference against the reference |
+| `caffe2onnx.py` | The ONNX converter, building the graph directly — likewise a library |
+| `export_onnx.py` | Runs it, writes `onnx_out/`, prints the difference |
 | `check_tf.py` | Intermediate-tensor diff against Caffe, on the TF side, for when a whole-model comparison fails |
 
 ## Running
 
-The reference and the two conversions want incompatible pins (OpenCV 5 dropped
-the Caffe importer), so keep them in separate virtualenvs:
-
-```sh
-./download_models.sh
-
-# reference output, needs OpenCV 4.x
-pip install -r requirements-ref.txt
-python ref_dump.py
-
-# ONNX, pure Python and the lighter of the two
-pip install grpcio-tools numpy onnx onnxruntime
-python -m grpc_tools.protoc -I. --python_out=. caffe.proto   # generates caffe_pb2.py
-python export_onnx.py            # writes onnx_out/{detect,sr}.onnx
-
-# TFLite, needs TensorFlow
-pip install -r requirements.txt
-python export_tflite.py          # writes tflite_out/{detect,sr}.tflite
-```
-
-Both export scripts print the maximum absolute difference against the Caffe
-reference; it should stay around 1e-6, the noise floor of float32 accumulating
-in a different order. Anything larger means the graph is not equivalent, not
-that it is imprecise.
+The runbook is in the [top-level README](../README.md#reproducing-the-conversion):
+fetch the Caffe models, dump the reference tensors under OpenCV 4.x, then run
+`export_onnx.py` and `export_tflite.py`, each in its own virtualenv. Three
+environments, because the reference and the two conversions want pins that
+cannot coexist.
 
 ## Why ONNX is the simpler of the two
 

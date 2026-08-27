@@ -47,18 +47,67 @@ models WeChatCV publishes at
 
 ## Reproducing the conversion
 
+Four Caffe files go in, four weight files come out. Everything runs from
+`tools/`, in the order below, because each step consumes what the one before it
+produced.
+
+Two of those Python files are not scripts. `caffe2onnx.py` and `caffe2tf.py`
+are the converters themselves — one piece of code per Caffe layer, imported and
+never executed. `export_onnx.py` and `export_tflite.py` are what you run: each
+builds its two graphs through the matching converter, writes the files, and
+prints how far the result drifted from the Caffe reference. So the ONNX path is
+`export_onnx.py`, and `caffe2onnx.py` is where you look when its number comes
+out wrong.
+
+**1. The upstream weights.**
+
 ```sh
 cd tools
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-./download_models.sh          # fetches the upstream Caffe weights
-.venv/bin/python caffe2onnx.py
-.venv/bin/python export_onnx.py
-.venv/bin/python caffe2tf.py
-.venv/bin/python export_tflite.py
+./download_models.sh      # models/{detect,sr}.{caffemodel,prototxt}, MD5 checked
 ```
 
-`ref_dump.py` and `check_tf.py` compare the converted graphs against reference
-tensors from the OpenCV Caffe importer, which is what makes the conversion
-checkable rather than merely plausible. See `tools/README.md`.
+**2. The reference tensors.** OpenCV 5 dropped the Caffe importer, so this step
+pins 4.x and gets a virtualenv to itself:
+
+```sh
+python3 -m venv .venv-ref && .venv-ref/bin/pip install -r requirements-ref.txt
+.venv-ref/bin/python ref_dump.py          # writes ref_outputs.npz
+```
+
+Do not skip it. Both export scripts load `ref_outputs.npz`, and an export that
+was never compared against the Caffe output is a guess.
+
+**3. ONNX** — the lighter of the two paths, pure Python:
+
+```sh
+python3 -m venv .venv-onnx && .venv-onnx/bin/pip install -r requirements-onnx.txt
+.venv-onnx/bin/python -m grpc_tools.protoc -I. --python_out=. caffe.proto
+.venv-onnx/bin/python export_onnx.py      # writes onnx_out/{detect,sr}.onnx
+```
+
+The `protoc` line generates `caffe_pb2.py`, which is how both converters read a
+`.caffemodel`; it is needed once, not once per path.
+
+**4. TFLite** — the same models, through TensorFlow:
+
+```sh
+python3 -m venv .venv-tf && .venv-tf/bin/pip install -r requirements-tf.txt
+.venv-tf/bin/python export_tflite.py      # writes tflite_out/{detect,sr}.tflite
+```
+
+Both exports print the maximum absolute difference against the reference. It
+should land around 1e-6, which is float32 accumulating in a different order.
+Anything larger means the graph is not equivalent — not that it is imprecise —
+and `check_tf.py` then prints the same comparison layer by layer, to find where
+the two graphs part company. Once the numbers hold, copy the files into
+`models/` and refresh the checksums:
+
+```sh
+cp onnx_out/*.onnx tflite_out/*.tflite ../models/
+(cd .. && shasum -a 256 models/* > checksums.txt)
+```
+
+`tools/README.md` covers what each converter has to do, and why the TFLite path
+is three times the length of the ONNX one for the same two models.
 
 Apache-2.0, as are the upstream models. See `NOTICE`.

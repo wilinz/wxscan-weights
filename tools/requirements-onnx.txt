@@ -1,0 +1,5 @@
+# ONNX conversion environment: pure Python, no TensorFlow
+numpy
+onnx
+onnxruntime
+grpcio-tools
