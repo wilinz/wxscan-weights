@@ -1,4 +1,6 @@
-# Conversion environment (TensorFlow side)
+# Conversion environment (TensorFlow side).
+# The committed weights were last reproduced on 2.21; tf.lite.Interpreter, which
+# the export uses to score the result, warns about deletion but is still there.
 tensorflow>=2.16
 numpy
 protobuf
