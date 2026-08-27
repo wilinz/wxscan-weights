@@ -1,3 +1,5 @@
+"""Layer-by-layer diff between the TF rebuild and the Caffe reference, for
+when a whole-model comparison reports a large difference."""
 import numpy as np, tensorflow as tf
 from converters import caffe_to_tf
 ref = np.load('ref_outputs.npz')

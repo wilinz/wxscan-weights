@@ -1,8 +1,8 @@
-# Everything under tools/ that is downloaded or generated:
-#   models/          the upstream Caffe weights, fetched by 1_download_models.sh
+# Everything under tools/ that convert.py downloads or generates:
+#   models/          the upstream Caffe weights, fetched by convert.py
 #   caffe_pb2.py     generated from converters/caffe.proto by protoc
 #   ref_outputs.npz  reference tensors from the OpenCV Caffe importer
-#   *_out/           conversion output, copied into models/ once verified
+#   *_out/           conversion output, copied into models/ by the install step
 tools/models/
 tools/converters/caffe_pb2.py
 tools/ref_outputs.npz

@@ -12,22 +12,23 @@ question answerable.
 
 | File | Role |
 |---|---|
-| `1_download_models.sh` | Fetches the four Caffe files at the commit `opencv_contrib` pins, and checks the MD5 |
-| `2_dump_reference.py` | Reference output from OpenCV 4.x's Caffe importer, saved as `ref_outputs.npz` |
-| `3_export_onnx.py` | Builds both ONNX graphs through `converters/caffe_to_onnx.py`, writes `onnx_out/`, prints the difference |
-| `4_export_tflite.py` | The same through `converters/caffe_to_tf.py`, into `tflite_out/` |
-| `converters/caffe_to_onnx.py` | The ONNX translation, layer by layer — imported, never run |
-| `converters/caffe_to_tf.py` | The TFLite translation, as a Keras model — likewise |
-| `converters/caffe.proto` | The Caffe schema; `protoc` turns it into `caffe_pb2.py`, which reads `.caffemodel` |
-| `debug_compare_layers.py` | Intermediate-tensor diff against Caffe, on the TF side, for when a whole-model comparison fails |
+| `convert.py` | The only entry point: creates the virtualenvs and runs the steps below in order |
+| `steps/download.py` | Fetches the four Caffe files at the commit `opencv_contrib` pins, and checks their MD5 |
+| `steps/reference.py` | Reference output from OpenCV 4.x's Caffe importer, saved as `ref_outputs.npz` |
+| `steps/onnx.py` | Builds both ONNX graphs through `converters/caffe_to_onnx.py`, writes `onnx_out/`, prints the difference |
+| `steps/tflite.py` | The same through `converters/caffe_to_tf.py`, into `tflite_out/` |
+| `steps/install.py` | Copies the output into `../models/` and rewrites `checksums.txt` |
+| `steps/compare_layers.py` | Intermediate-tensor diff against Caffe, on the TF side, for when a whole-model comparison fails |
+| `converters/caffe_to_onnx.py` | The ONNX translation, layer by layer |
+| `converters/caffe_to_tf.py` | The TFLite translation, as a Keras model |
+| `converters/caffe.proto` | The Caffe schema; `convert.py` runs `protoc` over it to get `caffe_pb2.py`, which reads a `.caffemodel` |
 
 ## Running
 
-The runbook is in the [top-level README](../README.md#reproducing-the-conversion):
-fetch the Caffe models, dump the reference tensors under OpenCV 4.x, then run
-`3_export_onnx.py` and `4_export_tflite.py`, each in its own virtualenv. Three
-environments, because the reference and the two conversions want pins that
-cannot coexist.
+`./convert.py all`, or one step at a time — the
+[top-level README](../README.md#reproducing-the-conversion) has the details.
+The three virtualenvs it creates are not optional: the reference and the two
+conversions want pins that cannot coexist.
 
 ## Why ONNX is the simpler of the two
 
