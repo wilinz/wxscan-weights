@@ -3,7 +3,7 @@
 The upstream models are Caffe. This directory rebuilds them, layer by layer,
 in the two formats the Rust backends run: TFLite for `wxscan-tflite`, ONNX for
 tract. Neither path retrains or alters a weight; both are checked against the
-Caffe output before being copied into `crates/wxscan-models/models/`.
+Caffe output before being copied into `../models/`.
 
 There is no generic Caffe importer here, only the layers these two models use.
 That is a deliberate limit: it keeps each converter short enough to read against
