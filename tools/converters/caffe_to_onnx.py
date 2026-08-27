@@ -1,6 +1,6 @@
 """Rebuild the two wechat_qrcode Caffe models layer by layer as ONNX graphs.
 
-The companion of `caffe2tf.py`, for the pure Rust (tract) backend. ONNX is
+The companion of `caffe_to_tf.py`, for the pure Rust (tract) backend. ONNX is
 NCHW like Caffe, so unlike the TFLite path there is no layout conversion and
 most layers map one to one:
   * Conv/ConvTranspose take Caffe's weight layout, groups, dilation and
@@ -17,7 +17,7 @@ import numpy as np
 import onnx
 from onnx import TensorProto, helper, numpy_helper
 
-import caffe_pb2
+from . import caffe_pb2
 
 
 def blob_array(blob):

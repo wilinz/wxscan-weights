@@ -1,7 +1,7 @@
 """Export detect.onnx and sr.onnx and compare them against the Caffe reference output."""
 import os, sys
 import numpy as np, onnx, onnxruntime as ort
-import caffe2onnx
+from converters import caffe_to_onnx
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'onnx_out'
 os.makedirs(OUT, exist_ok=True)
@@ -20,7 +20,7 @@ def run(path, x, names):
 
 
 # ── SR ──
-sr = caffe2onnx.Converter('models/sr.caffemodel').build({'fc': [1, 1, None, None]}, 'sr')
+sr = caffe_to_onnx.Converter('models/sr.caffemodel').build({'fc': [1, 1, None, None]}, 'sr')
 sr_path = export(sr, f'{OUT}/sr.onnx')
 x = (ref['sr_in'].astype(np.float32) / 255.0)[None, None]
 (out,) = run(sr_path, x, ['fc'])
@@ -30,7 +30,7 @@ print(f"  sr onnx vs caffe: max={d.max():.3e} mean={d.mean():.3e}")
 # ── Detect ──
 out_shapes = {'mbox_loc': [1, None], 'mbox_conf_flatten': [1, None]}
 names = list(out_shapes)
-det = caffe2onnx.Converter('models/detect.caffemodel').build(out_shapes, 'detect')
+det = caffe_to_onnx.Converter('models/detect.caffemodel').build(out_shapes, 'detect')
 det_path = export(det, f'{OUT}/detect.onnx')
 for tag in ['det', 'det2']:
     x = (ref[tag + '_in'].astype(np.float32) / 255.0)[None, None]

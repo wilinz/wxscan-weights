@@ -1,4 +1,5 @@
-import numpy as np, tensorflow as tf, caffe2tf
+import numpy as np, tensorflow as tf
+from converters import caffe_to_tf
 ref = np.load('ref_outputs.npz')
 
 def cmp(name, a, b):
@@ -8,7 +9,7 @@ def cmp(name, a, b):
     print(f"{name:24s} shapes {a.size} vs {b.size}  max={d.max():.3e} mean={d.mean():.3e}")
 
 # ── SR ──
-c = caffe2tf.Converter('models/sr.caffemodel')
+c = caffe_to_tf.Converter('models/sr.caffemodel')
 m = c.build((None, None), ['fc'])
 img = ref['sr_in']
 x = (img.astype(np.float32)/255.0)[None, :, :, None]
@@ -17,7 +18,7 @@ print('sr tf out', out.shape, 'caffe', ref['sr_out'].shape)
 cmp('sr', ref['sr_out'], out[0, :, :, 0])
 
 # ── Detect ──
-c2 = caffe2tf.Converter('models/detect.caffemodel')
+c2 = caffe_to_tf.Converter('models/detect.caffemodel')
 md = c2.build((None, None), ['mbox_loc', 'mbox_conf_flatten'])
 for tag in ['det', 'det2']:
     img = ref[tag + '_in']

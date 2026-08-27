@@ -47,67 +47,69 @@ models WeChatCV publishes at
 
 ## Reproducing the conversion
 
-Four Caffe files go in, four weight files come out. Everything runs from
-`tools/`, in the order below, because each step consumes what the one before it
-produced.
+You do not need any of this to use the weights — the files in `models/` are
+ready to use. This section is for checking that they really are the upstream
+models and nothing else.
 
-Two of those Python files are not scripts. `caffe2onnx.py` and `caffe2tf.py`
-are the converters themselves — one piece of code per Caffe layer, imported and
-never executed. `export_onnx.py` and `export_tflite.py` are what you run: each
-builds its two graphs through the matching converter, writes the files, and
-prints how far the result drifted from the Caffe reference. So the ONNX path is
-`export_onnx.py`, and `caffe2onnx.py` is where you look when its number comes
-out wrong.
+Everything lives in `tools/`. The scripts you run are numbered, and you run
+them in that order. Anything without a number is not meant to be run: the
+`converters/` folder holds the code that does the actual translation, and
+`debug_compare_layers.py` is only useful when something has gone wrong.
 
-**1. The upstream weights.**
+| Script | What it does |
+|---|---|
+| `1_download_models.sh` | Downloads the four original Caffe files into `models/` and checks their MD5 |
+| `2_dump_reference.py` | Runs those originals once and saves the output as `ref_outputs.npz` — the answer key |
+| `3_export_onnx.py` | Rebuilds both models as ONNX, writes `onnx_out/`, and prints how far it landed from the answer key |
+| `4_export_tflite.py` | The same again, as TFLite, into `tflite_out/` |
+
+Each step gets its own virtualenv. Not for neatness: the answer key needs an
+old OpenCV, ONNX needs its own packages and TensorFlow is a world of its own,
+and the three cannot be installed together.
 
 ```sh
 cd tools
-./download_models.sh      # models/{detect,sr}.{caffemodel,prototxt}, MD5 checked
-```
 
-**2. The reference tensors.** OpenCV 5 dropped the Caffe importer, so this step
-pins 4.x and gets a virtualenv to itself:
+# 1. the original Caffe models
+./1_download_models.sh
 
-```sh
+# 2. the answer key. OpenCV 5 can no longer read Caffe, so this step alone
+#    pins 4.x.
 python3 -m venv .venv-ref && .venv-ref/bin/pip install -r requirements-ref.txt
-.venv-ref/bin/python ref_dump.py          # writes ref_outputs.npz
-```
+.venv-ref/bin/python 2_dump_reference.py
 
-Do not skip it. Both export scripts load `ref_outputs.npz`, and an export that
-was never compared against the Caffe output is a guess.
-
-**3. ONNX** — the lighter of the two paths, pure Python:
-
-```sh
+# 3. ONNX
 python3 -m venv .venv-onnx && .venv-onnx/bin/pip install -r requirements-onnx.txt
-.venv-onnx/bin/python -m grpc_tools.protoc -I. --python_out=. caffe.proto
-.venv-onnx/bin/python export_onnx.py      # writes onnx_out/{detect,sr}.onnx
-```
+.venv-onnx/bin/python -m grpc_tools.protoc -I converters --python_out=converters converters/caffe.proto
+.venv-onnx/bin/python 3_export_onnx.py
 
-The `protoc` line generates `caffe_pb2.py`, which is how both converters read a
-`.caffemodel`; it is needed once, not once per path.
-
-**4. TFLite** — the same models, through TensorFlow:
-
-```sh
+# 4. TFLite
 python3 -m venv .venv-tf && .venv-tf/bin/pip install -r requirements-tf.txt
-.venv-tf/bin/python export_tflite.py      # writes tflite_out/{detect,sr}.tflite
+.venv-tf/bin/python 4_export_tflite.py
 ```
 
-Both exports print the maximum absolute difference against the reference. It
-should land around 1e-6, which is float32 accumulating in a different order.
-Anything larger means the graph is not equivalent — not that it is imprecise —
-and `check_tf.py` then prints the same comparison layer by layer, to find where
-the two graphs part company. Once the numbers hold, copy the files into
-`models/` and refresh the checksums:
+The `protoc` line writes `converters/caffe_pb2.py`, which is what lets Python
+open a `.caffemodel` file at all. Steps 3 and 4 both need it, and it only has
+to be generated once.
+
+### What the printed number means
+
+Steps 3 and 4 each end by printing the largest difference between the model
+they just built and the answer key from step 2. Around `1e-6` means the two are
+the same graph, and the gap is float32 arithmetic happening in a different
+order. Much larger than that means the rebuilt graph is genuinely not the same
+model — not that it is slightly less accurate — and
+`debug_compare_layers.py` prints the same comparison layer by layer, so you can
+see where the two stop agreeing.
+
+Once the numbers look right, the new files replace the shipped ones:
 
 ```sh
 cp onnx_out/*.onnx tflite_out/*.tflite ../models/
 (cd .. && shasum -a 256 models/* > checksums.txt)
 ```
 
-`tools/README.md` covers what each converter has to do, and why the TFLite path
-is three times the length of the ONNX one for the same two models.
+`tools/README.md` goes into what each converter has to do, and why the TFLite
+path is three times the length of the ONNX one for the same two models.
 
 Apache-2.0, as are the upstream models. See `NOTICE`.

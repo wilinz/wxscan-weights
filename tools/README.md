@@ -12,19 +12,20 @@ question answerable.
 
 | File | Role |
 |---|---|
-| `download_models.sh` | Fetches the four Caffe files at the commit `opencv_contrib` pins, and checks the MD5 |
-| `ref_dump.py` | Reference output from OpenCV 4.x's Caffe importer, saved as `ref_outputs.npz` |
-| `caffe2tf.py` | The TFLite converter, layer by layer, as a Keras model — a library, not a script |
-| `export_tflite.py` | Runs that converter, writes `tflite_out/`, prints the difference against the reference |
-| `caffe2onnx.py` | The ONNX converter, building the graph directly — likewise a library |
-| `export_onnx.py` | Runs it, writes `onnx_out/`, prints the difference |
-| `check_tf.py` | Intermediate-tensor diff against Caffe, on the TF side, for when a whole-model comparison fails |
+| `1_download_models.sh` | Fetches the four Caffe files at the commit `opencv_contrib` pins, and checks the MD5 |
+| `2_dump_reference.py` | Reference output from OpenCV 4.x's Caffe importer, saved as `ref_outputs.npz` |
+| `3_export_onnx.py` | Builds both ONNX graphs through `converters/caffe_to_onnx.py`, writes `onnx_out/`, prints the difference |
+| `4_export_tflite.py` | The same through `converters/caffe_to_tf.py`, into `tflite_out/` |
+| `converters/caffe_to_onnx.py` | The ONNX translation, layer by layer — imported, never run |
+| `converters/caffe_to_tf.py` | The TFLite translation, as a Keras model — likewise |
+| `converters/caffe.proto` | The Caffe schema; `protoc` turns it into `caffe_pb2.py`, which reads `.caffemodel` |
+| `debug_compare_layers.py` | Intermediate-tensor diff against Caffe, on the TF side, for when a whole-model comparison fails |
 
 ## Running
 
 The runbook is in the [top-level README](../README.md#reproducing-the-conversion):
 fetch the Caffe models, dump the reference tensors under OpenCV 4.x, then run
-`export_onnx.py` and `export_tflite.py`, each in its own virtualenv. Three
+`3_export_onnx.py` and `4_export_tflite.py`, each in its own virtualenv. Three
 environments, because the reference and the two conversions want pins that
 cannot coexist.
 
@@ -32,10 +33,10 @@ cannot coexist.
 
 ONNX is NCHW, like Caffe, and its Conv/ConvTranspose take Caffe's weight
 layout, groups, dilation and symmetric padding as they are; MaxPool has a
-`ceil_mode` for Caffe's window clipping. So `caffe2onnx.py` is close to a
+`ceil_mode` for Caffe's window clipping. So `caffe_to_onnx.py` is close to a
 transcription. The TFLite path has to move every tensor to NHWC, expand
 dilation into sparse kernels, and pad explicitly because TF's `same` is
-asymmetric at stride 2 — which is why `caffe2tf.py` is three times the length
+asymmetric at stride 2 — which is why `caffe_to_tf.py` is three times the length
 for the same models.
 
 Two things are left to the Rust side in both formats, as upstream's own

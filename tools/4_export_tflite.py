@@ -1,5 +1,6 @@
 """Export detect.tflite and sr.tflite and compare them against the Caffe reference output."""
-import numpy as np, tensorflow as tf, caffe2tf, os, sys
+import numpy as np, tensorflow as tf, os, sys
+from converters import caffe_to_tf
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'tflite_out'
 os.makedirs(OUT, exist_ok=True)
@@ -28,7 +29,7 @@ def run_tflite(tfl_bytes, x, n_out):
 
 
 # ── SR ──
-c = caffe2tf.Converter('models/sr.caffemodel')
+c = caffe_to_tf.Converter('models/sr.caffemodel')
 sr = c.build((None, None), ['fc'])
 sr_bytes = export(sr, f'{OUT}/sr.tflite', None)
 x = (ref['sr_in'].astype(np.float32)/255.0)[None, :, :, None]
@@ -37,7 +38,7 @@ d = np.abs(ref['sr_out'].ravel() - out.ravel())
 print(f"  sr tflite vs caffe: max={d.max():.3e} mean={d.mean():.3e}")
 
 # ── Detect ──
-c2 = caffe2tf.Converter('models/detect.caffemodel')
+c2 = caffe_to_tf.Converter('models/detect.caffemodel')
 det = c2.build((None, None), ['mbox_loc', 'mbox_conf_flatten'])
 det_bytes = export(det, f'{OUT}/detect.tflite', None)
 names = [o.name for o in det.outputs]

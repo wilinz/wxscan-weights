@@ -14,7 +14,7 @@ Only the layers these two models use are covered. The main correspondences:
 """
 import numpy as np
 import tensorflow as tf
-import caffe_pb2
+from . import caffe_pb2
 
 L = tf.keras.layers
 
